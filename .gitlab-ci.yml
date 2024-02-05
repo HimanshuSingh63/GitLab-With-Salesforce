@@ -1,37 +1,68 @@
-# This file is a template, and might need editing before it works on your project.
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
+image: node:latest
+before_script:
+  - npm install --global sfdx-cli
+stages:
+  - validate in UAT
+  - deploy in UAT
+  - validate in PROD
+  - deploy in PROD
 
-# Build a Docker image with CI/CD and push to the GitLab registry.
-# Docker-in-Docker documentation: https://docs.gitlab.com/ee/ci/docker/using_docker_build.html
-#
-# This template uses one generic job with conditional builds
-# for the default branch and all other (MR) branches.
-
-docker-build:
-  # Use the official docker image.
-  image: docker:cli
-  stage: build
-  services:
-    - docker:dind
-  variables:
-    DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-  before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-  # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
-  # Default branch is also tagged with `latest`
+validate in UAT:
+  stage: validate in UAT
   script:
-    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
-    - docker push "$DOCKER_IMAGE_NAME"
-    - |
-      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
-        docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
-        docker push "$CI_REGISTRY_IMAGE:latest"
-      fi
-  # Run this job in a branch where a Dockerfile exists
-  rules:
-    - if: $CI_COMMIT_BRANCH
-      exists:
-        - Dockerfile
+  - echo "Validation Started in UAT" # Debug statement
+  - export MDAPI_DEPLOYDIR=FirstProject/force-app/main/default # Set the metadata deploy directory
+  - export INSTANCEURL=https://test.salesforce.com # Set the instance URL for UAT
+  - export ALIAS=qa # Set the alias for UAT
+  - export TESTLEVEL=RunLocalTests # Set the test level for deployment
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_UAT -iv $DECRYPTION_IV_UAT # Decrypt the server key for UAT
+  - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_UAT --jwtkeyfile assets/server.key --username $USERNAME_UAT --setalias $ALIAS
+  - sfdx force:mdapi:deploy --checkonly --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
+  - echo "Validation completed in UAT" # Debug statementtt
+  only:
+    - sub_uat
+
+deploy in UAT:
+  stage: deploy in UAT
+  script:
+  - echo "Deployment Started in UAT" # Debug statement
+  - export MDAPI_DEPLOYDIR=FirstProject/force-app/main/default # Set the metadata deploy directory
+  - export INSTANCEURL=https://test.salesforce.com # Set the instance URL for UAT
+  - export ALIAS=qa # Set the alias for UAT
+  - export TESTLEVEL=RunLocalTests # Set the test level for deployment
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_UAT -iv $DECRYPTION_IV_UAT # Decrypt the server key for UAT
+  - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_UAT --jwtkeyfile assets/server.key --username $USERNAME_UAT --setalias $ALIAS # Authenticate to UAT using JWT
+  - sfdx force:mdapi:deploy --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
+  - echo "Deployment completed in UAT" # Debug statement
+  only:
+    - main_uat
+
+validate in PROD:
+  stage: validate in PROD
+  script:
+  - echo "Validation Started in UAT" # Debug statement
+  - export MDAPI_DEPLOYDIR=FirstProject/force-app/main/default # Set the metadata deploy directory
+  - export INSTANCEURL=https://login.salesforce.com # Set the instance URL for prod
+  - export ALIAS=qa # Set the alias for prod
+  - export TESTLEVEL=RunLocalTests # Set the test level for deployment
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_UAT -iv $DECRYPTION_IV_UAT # Decrypt the server key for UAT
+  - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_UAT --jwtkeyfile assets/server.key --username $USERNAME_UAT --setalias $ALIAS
+  - sfdx force:mdapi:deploy --checkonly --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
+  - echo "Validation completed in PROD" # Debug statementtt
+  only:
+    - sub_main
+
+deploy in PROD:
+  stage: deploy in PROD
+  script:
+  - echo "Deployment Started in PROD" # Debug statement
+  - export MDAPI_DEPLOYDIR=FirstProject/force-app/main/default # Set the metadata deploy directory
+  - export INSTANCEURL=https://login.salesforce.com # Set the instance URL for prod
+  - export ALIAS=qa # Set the alias for Prod
+  - export TESTLEVEL=RunLocalTests # Set the test level for deployment
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_UAT -iv $DECRYPTION_IV_UAT # Decrypt the server key for UAT
+  - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_UAT --jwtkeyfile assets/server.key --username $USERNAME_UAT --setalias $ALIAS # Authenticate to UAT using JWT
+  - sfdx force:mdapi:deploy --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
+  - echo "Deployment completed in PROD" # Debug statement
+  only:
+    - main
