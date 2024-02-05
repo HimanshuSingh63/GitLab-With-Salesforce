@@ -45,7 +45,7 @@ validate in PROD:
   - export INSTANCEURL=https://login.salesforce.com # Set the instance URL for prod
   - export ALIAS=qa # Set the alias for prod
   - export TESTLEVEL=RunLocalTests # Set the test level for deployment
-  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_PROD -iv $DECRYPTION_IV_PROD # Decrypt the server key for UAT
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_PROD -iv $DECRYPTION_IV_PROD # Decrypt the server key for UAT
   - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_PROD --jwtkeyfile assets/server.key --username $USERNAME_PROD --setalias $ALIAS
   - sfdx force:mdapi:deploy --checkonly --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
   - echo "Validation completed in PROD" # Debug statementtt
@@ -60,7 +60,7 @@ deploy in PROD:
   - export INSTANCEURL=https://login.salesforce.com # Set the instance URL for prod
   - export ALIAS=qa # Set the alias for Prod
   - export TESTLEVEL=RunLocalTests # Set the test level for deployment
-  - openssl enc -nosalt -aes-256-cbc -d -in assets/server1.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_PROD -iv $DECRYPTION_IV_PROD # Decrypt the server key for UAT
+  - openssl enc -nosalt -aes-256-cbc -d -in assets/server.key.enc -out assets/server.key -base64 -K $DECRYPTION_KEY_PROD -iv $DECRYPTION_IV_PROD # Decrypt the server key for UAT
   - sfdx force:auth:jwt:grant --instanceurl $INSTANCEURL --clientid $CONSUMER_KEY_PROD --jwtkeyfile assets/server.key --username $USERNAME_PROD --setalias $ALIAS # Authenticate to UAT using JWT
   - sfdx force:mdapi:deploy --wait 10 --deploydir $MDAPI_DEPLOYDIR --targetusername $ALIAS --testlevel $TESTLEVEL # Deploy the metadata to UAT in check-only mode
   - echo "Deployment completed in PROD" # Debug statement
